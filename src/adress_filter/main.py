@@ -1,11 +1,11 @@
 import httpx
 import asyncio
-import json
 import os
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt
 import datetime
 import pandas as pd
+from read_keyword import get_all_keywords  # 新增导入
 
 load_dotenv()
 
@@ -103,6 +103,6 @@ async def main(keyword_list):
     return result
 
 if __name__ == '__main__':
-    keyword_list = ['朝阳区运维培训']
+    keyword_list = get_all_keywords()  # 使用新模块读取的关键词
     result = asyncio.run(main(keyword_list))
     print(result)
