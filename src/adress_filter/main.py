@@ -70,12 +70,12 @@ async def save_results_async(result, temp_file):
 async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
     
     # 确保./temp/和./data/目录存在，不存在则创建
-    os.makedirs("./temp", exist_ok=True)
-    os.makedirs("./data", exist_ok=True)
+    os.makedirs(os.path.abspath("./temp"), exist_ok=True)
+    os.makedirs(os.path.abspath("./data"), exist_ok=True)
     
     # 将result写入./temp/temp_时间.txt
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    temp_file = f"./temp/temp_{timestamp}.txt"
+    temp_file = os.path.abspath(f"./temp/temp_{timestamp}.txt")
     
     # 全局复用 AsyncClient，并设置连接池参数
     limits = httpx.Limits(max_connections=max_conn, max_keepalive_connections=max_semaphore)
@@ -111,7 +111,7 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
         })
 
     # 将解析后的字典列表存储为xlsx文件
-    result_file = f"./data/result_{timestamp}.xlsx"
+    result_file = os.path.abspath(f"./data/result_{timestamp}.xlsx")
     df = pd.DataFrame(parsed_list)
     df.to_excel(result_file, index=False)
     print(f"结果已保存到 {result_file}")
@@ -130,11 +130,19 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
     return result
 
 if __name__ == '__main__':
-    keyword_dir = './keyword_data'
+    keyword_dir = os.path.abspath('./keyword_data')
     MAX_CONN = 20
     MAX_SEMAPHORE = 10
+    if not os.path.exists(keyword_dir):  # 如果目录不存在，则创建
+        os.makedirs(keyword_dir)
+        print(f"创建目录 {keyword_dir}")
+        print('请将需要筛选地域的关键词文件放入keyword_data目录下，并运行本程序')
+        print('按任意键退出...')
+        input()
+        exit()
     keyword_list = get_all_keywords(keyword_dir)  # 使用新模块读取的关键词
     result = asyncio.run(main(keyword_list,MAX_CONN,MAX_SEMAPHORE))
     print("处理完成")
     print('按任意键退出....')
     input()
+
