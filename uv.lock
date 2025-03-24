@@ -143,7 +143,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
     { name = "tenacity", specifier = ">=9.0.0" },
-    { name = "tkzs-bd-ads-db-tool", specifier = ">=0.2.2" },
+    { name = "tkzs-bd-ads-db-tool", specifier = ">=0.2.3" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
@@ -303,16 +303,16 @@ wheels = [
 
 [[package]]
 name = "tkzs-bd-ads-db-tool"
-version = "0.2.2"
+version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pymysql" },
     { name = "python-dotenv" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cf/3b/eb76a04736ce5c10990b898968ef0cde6d70b1257071699585fb3a3825f6/tkzs_bd_ads_db_tool-0.2.2.tar.gz", hash = "sha256:276e6c527298ee2a417bd16a4cb717a4f38bb96beff4a0ded0b0d470b61c0990", size = 8504 }
+sdist = { url = "https://files.pythonhosted.org/packages/73/50/3acf953d0956713eea7aafc9cd894c8720648e74f71ba8542765aebb199c/tkzs_bd_ads_db_tool-0.2.3.tar.gz", hash = "sha256:0d71438a77253a23e9d9be71d1c3ae760a30da5b8fb59c0f82287658ce26c92a", size = 8764 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a7/dc/e90305b645a36d7c1e0789bf1e0af1408b4b73aff9c3f0804612fc20a9e5/tkzs_bd_ads_db_tool-0.2.2-py3-none-any.whl", hash = "sha256:652c3b5e00cd3bff73e424d391e437694b5312e300eba224f80b23865f67e7cd", size = 9054 },
+    { url = "https://files.pythonhosted.org/packages/82/b7/38abd030108e66501b6d35458c18a2288a7c87aa1aa2d9c8a06483e13a58/tkzs_bd_ads_db_tool-0.2.3-py3-none-any.whl", hash = "sha256:a30f9d3549ef46e9101e87e39fd506780ab6aeeadd0538b8c1e3e228bdb2215a", size = 9311 },
 ]
 
 [[package]]
