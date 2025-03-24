@@ -172,3 +172,17 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# 忽略excel文件
+*.xls
+*.xlsx
+*.xlsm
+
+# 忽略word文件
+*.doc
+*.docx
+*.docm
+
+# 忽略temp文件夹
+temp/
