@@ -72,6 +72,7 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
     # 确保./temp/和./data/目录存在，不存在则创建
     os.makedirs(os.path.abspath("./temp"), exist_ok=True)
     os.makedirs(os.path.abspath("./data"), exist_ok=True)
+    os.makedirs(os.path.abspath("./parse_fail"), exist_ok=True)
     
     # 将result写入./temp/temp_时间.txt
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -98,17 +99,28 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
 
     # 解析result的str元素为字典
     parsed_list = []
+    parsed_fail_list = []
     for temp in result:
-        item = temp['result']
-        is_shenzhen = item.split(",")[0]
-        province = item.split(",")[1].split(":")[1].strip()
-        region = item.split(",")[2].split(":")[1].strip()
-        parsed_list.append({
-            "关键词": temp['关键词'],
-            "是否深圳地区": is_shenzhen,
-            "省份": province,
-            "地域": region
-        })
+        try:
+            item = temp['result']
+            is_shenzhen = item.split(",")[0]
+            province = item.split(",")[1].split(":")[1].strip()
+            region = item.split(",")[2].split(":")[1].strip()
+            parsed_list.append({
+                "关键词": temp['关键词'],
+                "是否深圳地区": is_shenzhen,
+                "省份": province,
+                "地域": region
+            })
+        except Exception as e:
+            print(f"解析 {temp} 时出错: {str(e)}")
+            parsed_fail_list.append({
+                "关键词": temp['关键词'],
+                "解析失败原因": str(e)
+            })
+    parsed_fail_file = os.path.abspath(f"./parse_fail/parse_fail_{timestamp}.xlsx")
+    await save_results_async(parsed_fail_list, parsed_fail_file)
+
 
     # 将解析后的字典列表存储为xlsx文件
     result_file = os.path.abspath(f"./data/result_{timestamp}.xlsx")
@@ -120,7 +132,10 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
         with get_session() as session:
             df.rename(columns={'关键词': 'keyword', '是否深圳地区': 'is_shenzhen',"省份":"province","地域":"region"}, inplace=True)
             filtered_keyword_list = df.to_dict('records')
-            session.bulk_insert_mappings(models.KeywordFilterAddress, filtered_keyword_list)
+            BATCH_SIZE = 500
+            for i in tqdm(range(0, len(filtered_keyword_list), BATCH_SIZE),desc='插入新数据'):
+                batch = filtered_keyword_list[i:i+BATCH_SIZE]
+                session.bulk_insert_mappings(models.KeywordFilterAddress, batch)
             session.commit()
         print("数据已保存到数据库中。")
     except Exception as e:

@@ -1,0 +1,188 @@
+from tkzs_bd_db_tool import get_session,init_db
+from tkzs_bd_db_tool import models
+
+import os
+import pandas as pd
+import logging
+import json
+from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
+
+def get_local_result(file_dir):
+    result = []
+    for filename in os.listdir(file_dir):
+        if not filename.endswith(('.xlsx', '.xls')) or not filename.startwith('result_'):
+            continue
+        file_path = os.path.join(file_dir, filename)
+        try:
+            xl = pd.ExcelFile(file_path)
+        except Exception as e:
+            print(f"无法读取文件 {file_path}: {str(e)}")
+            continue
+        for sheet_name in xl.sheet_names:
+            try:
+                df = pd.read_excel(file_path, sheet_name=sheet_name)
+                df.rename(columns={'关键词': 'keyword', '是否深圳地区': 'is_shenzhen',"省份":"province","地域":"region"}, inplace=True)
+                result.extend(df.to_dict('records'))
+            except Exception as e:
+                print(f"处理工作表 {sheet_name} 时出错: {str(e)}")
+                continue
+    return result
+
+
+# def get_local_temp(temp_dir):
+#     result = []
+#     for filename in os.listdir(temp_dir):
+#         # 修正方法名拼写错误（startswith 而不是 startwith）
+#         if not filename.endswith('.txt') or not filename.startswith('temp_'):
+#             continue
+#         file_path = os.path.join(temp_dir, filename)
+#         try:
+#             with open(file_path, 'r', encoding='utf-8') as f:
+#                 # 读取所有行并去除空行
+#                 lines = [line.strip() for line in f.readlines() if line.strip()]
+                
+#                 # 按需构建数据结构（假设每行是一个关键词）
+#                 for line in lines:
+#                     result.append(
+#                         json.loads(line)
+#                     )
+#         except Exception as e:
+#             print(f"处理文件 {filename} 时出错: {str(e)}")
+#             continue
+#     return result
+
+def get_local_temp(temp_dir):
+    result = []
+    err_return = []
+    fail_result = []
+    for filename in os.listdir(temp_dir):
+        if not filename.endswith('.txt') or not filename.startswith('temp_'):
+            continue
+        file_path = os.path.join(temp_dir, filename)
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        # 转换单引号为双引号，并解析
+                        json_str = line.replace("'", '"')
+                        data = json.loads(json_str)
+                        # 解析 result 字段
+                        if 'result' in data:
+                            result_info = data.pop('result')
+                            parts = [p.split(':', 1) for p in result_info.split(',')]
+                        if len(parts) != 3:
+                            err_return.append(data.get('关键词'))
+                            continue
+                        # 数据结构标准化
+                        standardized = {
+                            'keyword': data.get('关键词', ''),
+                            'is_shenzhen': parts[0][0],
+                            'province': parts[1][1],
+                            'region': parts[2][1]
+                        }
+
+                        result.append(standardized)
+                        standardized = {}
+                        
+                    except (json.JSONDecodeError, SyntaxError) as e:
+                        print(f"解析失败 (文件 {filename} 行内容: {line}): {str(e)}")
+                        fail_result.append(line)
+        except Exception as e:
+            print(f"处理文件 {filename} 时出错: {str(e)}")
+            
+    return result,err_return,fail_result
+def get_update_list(result:list,records:list)->tuple[list[dict],list[dict]]:
+    result_mapping_dict = {}
+    for item in result:
+        result_mapping_dict[item['keyword']] = {
+            'is_shenzhen': item['is_shenzhen'],
+            'province': item['province'],
+            'region': item['region']
+        }
+    # print(result_mapping_dict)
+    db_mapping_dict = {}
+    for item in records:
+        db_mapping_dict[item.keyword] = {
+            'is_shenzhen': item.is_shenzhen,
+            'province': item.province,
+            'region': item.region,
+            'id': item.id
+        }
+    # print(db_mapping_dict)
+    update_list = []
+    insert_list = []
+    for key,value in result_mapping_dict.items():
+
+        if key not in db_mapping_dict.keys():
+            insert_list.append({
+                'keyword': key,
+                'is_shenzhen': value['is_shenzhen'],
+                'province': value['province'],
+                'region': value['region']
+            })
+            continue
+
+        if value['province'] == db_mapping_dict[key]['province'] and value['region'] == db_mapping_dict[key]['region']:
+            if value['is_shenzhen'] == db_mapping_dict[key]['is_shenzhen']:
+                continue
+            else:
+                update_list.append({
+                    'id': db_mapping_dict[key]['id'],
+                    'is_shenzhen': value['is_shenzhen'],
+                })
+        else:
+            update_list.append({
+                'id': db_mapping_dict[key]['id'],
+                'is_shenzhen': value['is_shenzhen'],
+                'province': value['province'],
+                'region': value['region']
+            })
+    return update_list,insert_list
+
+
+
+def save_results(result, temp_file):
+    with open(temp_file, 'w', encoding='utf-8') as f:
+        for item in result:
+            f.write(f"{item}\n")
+
+
+
+if __name__ == '__main__':
+    file_dir = r'./reload'
+    result,err_return,fail_result = get_local_temp(file_dir)
+    print(f'len result :{len(result)}')
+    print(f'err result :{len(err_return)}')
+    print(f'len fail :{len(fail_result)}')
+    try:
+        init_db()
+        with get_session() as session:
+            records = session.query(models.KeywordFilterAddress).all()
+            update_list,insert_list = get_update_list(result,records)
+            print(f'update_list:{len(update_list)}')
+            print(f'inser_list :{len(insert_list)}')
+            print('更新数据库')
+            session.bulk_update_mappings(models.KeywordFilterAddress, update_list)
+            if insert_list:
+                BATCH_SIZE = 500
+                for i in tqdm(range(0, len(insert_list), BATCH_SIZE),desc='插入新数据'):
+                    batch = insert_list[i:i+BATCH_SIZE]
+                    session.bulk_insert_mappings(models.KeywordFilterAddress, batch)
+            session.commit()
+    except Exception as e:
+        print(f"数据库操作出错: {str(e)}")
+        session.rollback()
+    
+    err_dir = os.path.abspath(r'./err')
+    if not os.path.exists(err_dir):  # 如果目录不存在，则创建
+        os.makedirs(err_dir)
+
+    err_file = os.path.join(err_dir,'err_return.txt')
+    fail_file = os.path.join(err_dir,'fail_trans.txt')
+    save_results(err_return,err_file)
+    save_results(fail_result,fail_file)

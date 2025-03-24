@@ -186,3 +186,6 @@ cython_debug/
 
 # 忽略temp文件夹
 temp/
+
+# 忽略txt文件
+*.txt
