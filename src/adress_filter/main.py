@@ -6,6 +6,7 @@ from tenacity import retry, stop_after_attempt
 import datetime
 import pandas as pd
 from read_keyword import get_all_keywords  # 新增导入
+from tqdm import tqdm  # 新增导入
 
 load_dotenv()
 
@@ -66,8 +67,17 @@ async def main(keyword_list):
     # 创建任务序列
     tasks = [get_address_filter(keyword,semaphore) for keyword in keyword_list]
     
-    result = await asyncio.gather(*tasks)
-    
+    result = []
+    with tqdm(total=len(tasks), desc="处理任务") as pbar:
+        for future in asyncio.as_completed(tasks):
+            try:
+                res = await future
+                result.append(res)
+            except Exception as e:
+                print(f"任务出错: {e}")
+            finally:
+                pbar.update(1)
+    # 过滤None值
     result = [r for r in result if r is not None]
 
     # 确保./temp/和./data/目录存在，不存在则创建
