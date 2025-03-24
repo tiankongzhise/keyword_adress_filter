@@ -10,4 +10,5 @@ dependencies = [
     "pandas>=2.2.3",
     "python-dotenv>=1.0.1",
     "tenacity>=9.0.0",
+    "tqdm>=4.67.1",
 ]
