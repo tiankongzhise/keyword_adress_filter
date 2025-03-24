@@ -9,6 +9,7 @@ dependencies = [
     "httpx>=0.28.1",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
+    "pyinstaller>=6.12.0",
     "python-dotenv>=1.0.1",
     "tenacity>=9.0.0",
     "tkzs-bd-ads-db-tool>=0.2.3",

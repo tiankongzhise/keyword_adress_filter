@@ -114,7 +114,7 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
     result_file = f"./data/result_{timestamp}.xlsx"
     df = pd.DataFrame(parsed_list)
     df.to_excel(result_file, index=False)
-
+    print(f"结果已保存到 {result_file}")
     try:
         init_db()
         with get_session() as session:
@@ -122,6 +122,7 @@ async def main(keyword_list,max_conn:int = 20,max_semaphore:int = 10):
             filtered_keyword_list = df.to_dict('records')
             session.bulk_insert_mappings(models.KeywordFilterAddress, filtered_keyword_list)
             session.commit()
+        print("数据已保存到数据库中。")
     except Exception as e:
         print(f"数据库操作出错: {str(e)}")
         session.rollback()
@@ -134,4 +135,6 @@ if __name__ == '__main__':
     MAX_SEMAPHORE = 10
     keyword_list = get_all_keywords(keyword_dir)  # 使用新模块读取的关键词
     result = asyncio.run(main(keyword_list,MAX_CONN,MAX_SEMAPHORE))
-    print(result)
+    print("处理完成")
+    print('按任意键退出....')
+    input()
